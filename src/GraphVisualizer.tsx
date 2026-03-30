@@ -45,6 +45,9 @@ export const GraphVisualizer: React.FC<GraphVisualizerProps> = ({
   const [invertedNodes, setInvertedNodes] = useState<string[]>([]);
   const [paths, setPaths] = useState<PathResult[]>([]);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const engine = useMemo(() => new GraphEngine(data), [data]);
   const directed = data.directed ?? false;
@@ -447,6 +450,34 @@ export const GraphVisualizer: React.FC<GraphVisualizerProps> = ({
     return [];
   }, [selectedArray, mode, connectedNodes, invertedNodes, engine]);
 
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase();
+    return data.nodes.filter(
+      (n) =>
+        (n.label ?? n.id).toLowerCase().includes(q) ||
+        n.id.toLowerCase().includes(q)
+    );
+  }, [searchQuery, data.nodes]);
+
+  const handleSearchSelect = useCallback(
+    (nodeId: string, event: React.MouseEvent) => {
+      if (event.ctrlKey || event.metaKey) {
+        setSelectedNodes((prev) => {
+          const next = new Set(prev);
+          if (next.has(nodeId)) next.delete(nodeId);
+          else next.add(nodeId);
+          return next;
+        });
+      } else {
+        setSelectedNodes(new Set([nodeId]));
+      }
+      setSearchQuery("");
+      searchRef.current?.blur();
+    },
+    []
+  );
+
   const handleExportCSV = () => {
     if (mode === "paths" && paths.length > 0) {
       exportPathsAsCSV(paths);
@@ -511,6 +542,79 @@ export const GraphVisualizer: React.FC<GraphVisualizerProps> = ({
           fontSize: 13,
         }}
       >
+        {/* Search */}
+        <div style={{ position: "relative" }}>
+          <label style={{ fontWeight: 600, fontSize: 12, color: "#475569", display: "block", marginBottom: 4 }}>
+            Search Nodes
+          </label>
+          <input
+            ref={searchRef}
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+            placeholder="Type to search..."
+            style={{
+              width: "100%",
+              padding: "7px 10px",
+              border: "1px solid #d1d5db",
+              borderRadius: 6,
+              fontSize: 12,
+              outline: "none",
+              boxSizing: "border-box",
+              transition: "border-color 0.15s",
+              borderColor: searchFocused ? "#4f46e5" : "#d1d5db",
+            }}
+          />
+          {searchFocused && searchQuery.trim() && (
+            <div
+              style={{
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                right: 0,
+                marginTop: 4,
+                background: "#fff",
+                border: "1px solid #e2e8f0",
+                borderRadius: 6,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                maxHeight: 200,
+                overflow: "auto",
+                zIndex: 10,
+              }}
+            >
+              {searchResults.length === 0 ? (
+                <div style={{ padding: "8px 10px", color: "#94a3b8", fontSize: 12 }}>
+                  No nodes found
+                </div>
+              ) : (
+                searchResults.map((n, i) => (
+                  <div
+                    key={n.id}
+                    onMouseDown={(e) => handleSearchSelect(n.id, e)}
+                    style={{
+                      padding: "6px 10px",
+                      cursor: "pointer",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      borderBottom: i < searchResults.length - 1 ? "1px solid #f1f5f9" : "none",
+                      background: selectedNodes.has(n.id) ? "#f0f0ff" : "#fff",
+                      fontSize: 12,
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = selectedNodes.has(n.id) ? "#e8e8ff" : "#f8fafc")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = selectedNodes.has(n.id) ? "#f0f0ff" : "#fff")}
+                  >
+                    <span style={{ fontWeight: 500 }}>{n.label ?? n.id}</span>
+                    <span style={{ color: "#94a3b8", fontSize: 11 }}>{n.id}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Mode selector */}
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <label style={{ fontWeight: 600, fontSize: 12, color: "#475569" }}>

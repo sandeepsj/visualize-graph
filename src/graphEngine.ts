@@ -60,6 +60,17 @@ export class GraphEngine {
     return [...this.edges];
   }
 
+  /** Search nodes by label or id (case-insensitive substring match) */
+  searchNodes(query: string): GraphNode[] {
+    if (!query.trim()) return [];
+    const q = query.toLowerCase();
+    return this.nodes.filter(
+      (n) =>
+        (n.label ?? n.id).toLowerCase().includes(q) ||
+        n.id.toLowerCase().includes(q)
+    );
+  }
+
   /** Check if a node exists */
   hasNode(id: string): boolean {
     return this.adjacency.has(id);
