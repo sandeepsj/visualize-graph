@@ -1,5 +1,5 @@
 {
-  "name": "react-graph-visualizer",
+  "name": "@sandeepsj0000/react-graph-visualizer",
   "version": "1.0.0",
   "description": "React component for interactive graph visualization with node selection, path finding, and export capabilities",
   "main": "dist/index.cjs.js",
